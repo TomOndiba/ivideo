@@ -10,9 +10,9 @@ class FFMPEG {
 	{
 		$this->executable = $exe;
 	}
-	public function __construct()
+	public function __construct($exe = "ffmpeg")
 	{
-		$this->setExecutable("ffmpeg");
+		$this->setExecutable($exe);
 	}
 	public function getSeconds()
 	{
@@ -23,7 +23,6 @@ class FFMPEG {
 	}
 	public function run($args = array(), $name = "")
 	{
-		print_r($args);
 		$strarg = $this->executable;
 		foreach($args as $key=>$value)
 			$strarg .= " -$key $value";
@@ -36,29 +35,54 @@ class FFMPEG {
 
 class IVideo extends FFMPEG {
 	private $video;
+	private $raw;
+	private $format;
+	private $extension;
 	
+	public function setFormat($fmt) {
+		$this->format = $fmt;
+	}
+
 	public function split($count = 5)
 	{
+		$ext = $this->extension;
 		$vids = array();
 		for($i=0; $i < $count; $i++)
 		{
-			if (file_exists("video_$i.mp4"))
-				unlink("video_$i.mp4");
-
-			print $this->run(array(
-				'i'			=> 'video.mp4',
-				'ss'		 => $i * 2,
-				't'			=> 2,
+			$seg = sprintf($this->format, sha1($this->video), $i);
+			if (file_exists("$seg.$ext"))
+			{
+				array_push($vids, "$seg.$ext");
+				continue;
+			}
+			$this->run(array(
+				'ss'		=> $i * 30,
+				't'			=> 1,
 				'vcodec'	=> 'copy',
-				'an'		=> ''
-			), "video_$i.mp4");
-			array_push($vids, "video_$i.mp4");
+				'an'		=> '',
+				'i'			=> $this->video
+			), "$seg.$ext");
+
+			if (file_exists("$seg.$ext"))
+				array_push($vids, "$seg.$ext");
+		}
+		
+		if ($this->raw == true)
+		{
+			foreach($vids as $key=>$value)
+			{
+				$vids[$key] = file_get_contents($value);
+				unlink($value);
+			}
 		}
 		return $vids;
 	}
-	public function __construct($video = "")
+	public function __construct($video = "", $executable = "ffmpeg", $raw = false)
 	{
 		$this->video = $video;
-		parent::__construct();
+		$this->raw = $raw;
+		$this->extension = pathinfo($video, PATHINFO_EXTENSION);
+		$this->format = "%s_%d";
+		parent::__construct($executable);
 	}
-}
+};
