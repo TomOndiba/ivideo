@@ -14,13 +14,13 @@ class FFMPEG {
 	{
 		$this->setExecutable("ffmpeg");
 	}
-    public function getSeconds()
-    {
-        $seconds = 0;
-        $this->run(array(
-            
-        ));
-    }
+	public function getSeconds()
+	{
+		$seconds = 0;
+		$this->run(array(
+			
+		));
+	}
 	public function run($args = array(), $name = "")
 	{
 		print_r($args);
@@ -35,27 +35,27 @@ class FFMPEG {
 };
 
 class IVideo extends FFMPEG {
-    private $video;
-    
-    public function split($count = 5)
-    {
-        $vids = array();
-        for($i=0; $i < $count; $i++)
-        {
+	private $video;
+	
+	public function split($count = 5)
+	{
+		$vids = array();
+		for($i=0; $i < $count; $i++)
+		{
 			if (file_exists("video_$i.mp4"))
 				unlink("video_$i.mp4");
 
-            print $this->run(array(
-                'i'			=> 'video.mp4',
-                'ss'		 => $i * 2,
-                't'			=> 2,
-                'vcodec'	=> 'copy',
-                'an'		=> ''
-            ), "video_$i.mp4");
-            array_push($vids, "video_$i.mp4");
-        }
+			print $this->run(array(
+				'i'			=> 'video.mp4',
+				'ss'		 => $i * 2,
+				't'			=> 2,
+				'vcodec'	=> 'copy',
+				'an'		=> ''
+			), "video_$i.mp4");
+			array_push($vids, "video_$i.mp4");
+		}
 		return $vids;
-    }
+	}
 	public function __construct($video = "")
 	{
 		$this->video = $video;
