@@ -14,19 +14,14 @@ class FFMPEG {
 	{
 		$this->setExecutable($exe);
 	}
-	public function getSeconds()
-	{
-		$seconds = 0;
-		$this->run(array(
-			
-		));
-	}
 	public function run($args = array(), $name = "")
 	{
 		$strarg = $this->executable;
 		foreach($args as $key=>$value)
-			$strarg .= " -$key $value";
-		$strarg .= " $name";
+			$strarg .= " -$key" . (($value == "") ? "" : " $value");
+			
+		if ($name)
+			$strarg .= " $name";
 
 		exec($strarg, $output);
 		return join($output, "\n");
@@ -35,54 +30,89 @@ class FFMPEG {
 
 class IVideo extends FFMPEG {
 	private $video;
-	private $raw;
 	private $format;
-	private $extension;
+	private $size;
 	
-	public function setFormat($fmt) {
+	public function setFormat($fmt)
+	{
 		$this->format = $fmt;
 	}
-
-	public function split($count = 5)
+	public function getSeconds()
 	{
-		$ext = $this->extension;
-		$vids = array();
+		/***********************
+		 	## reference ##
+			ffmpeg -i file.flv 2>&1 | grep "Duration"| cut -d ' ' -f 4 | sed s/,// | sed 's@\..*@@g' | awk '{ split($1, A, ":"); split(A[3], B, "."); print 3600*A[1] + 60*A[2] + B[1] }'
+		************************/
+		$seconds = 0;
+		return (int)($this->run(array(
+			'i' => $this->video,
+		), '2>&1 | grep "Duration"| cut -d \' \' -f 4 | sed s/,// | sed \'s@\..*@@g\' | awk \'{  split($1, A, ":"); split(A[3], B, "."); print 3600*A[1] + 60*A[2] + B[1] }\''));
+	}
+	public function split($count = 5, $output = false, $raw = false)
+	{
+		$seconds = $this->getSeconds();
+		$distance = floor($seconds / $count);
+
+		if (!$output)
+			$output = "thumb-" . md5($this->video) . ".webm";
+
+		if (file_exists($output))
+			unlink($output);
+
+		/* Segment video out */
+		$segments = array();
 		for($i=0; $i < $count; $i++)
 		{
-			$seg = sprintf($this->format, sha1($this->video), $i);
-			if (file_exists("$seg.$ext"))
-			{
-				array_push($vids, "$seg.$ext");
-				continue;
-			}
-			$this->run(array(
-				'ss'		=> $i * 30,
-				't'			=> 1,
-				'vcodec'	=> 'copy',
-				'an'		=> '',
-				'i'			=> $this->video
-			), "$seg.$ext");
+			$name = "/tmp/ivideo$i" . md5($this->video . time()) .".mp4";
+			if (file_exists($name))
+				unlink($name);
 
-			if (file_exists("$seg.$ext"))
-				array_push($vids, "$seg.$ext");
+			$this->run(array(
+				'i' => $this->video,
+				'ss' 	=> ($i * $distance) + 1,
+				't' 	=> 1,
+				'c:v' 	=> 'libx264',
+				'an' 	=> '',
+				'vf' 	=> 'scale=' . $this->size[0] . ':' . $this->size[1]
+			), $name);
+			array_push($segments, $name);
 		}
+
+		/* Concat video into suitable format */
+		$list = array();
+		foreach($segments as $key=>$value)
+			array_push($list, "file '$value'");
+
+		file_put_contents("/tmp/ivideo.txt", join($list, "\n"));
 		
-		if ($this->raw == true)
+		$this->run(array(
+			'f' => 'concat',
+			'i' 	=> '/tmp/ivideo.txt',
+			'c:v' 	=> 'libvpx',
+			'b:v' 	=> '1M',
+			'crf' 	=> 10,
+			'an' 	=> '',
+			'vf' 	=> 'scale=' . $this->size[0] . ':' . $this->size[1]
+		), $output);
+		
+		/* Cleanup */
+		foreach($segments as $key=>$value)
+			unlink($value);
+
+		if ($raw == true)
 		{
-			foreach($vids as $key=>$value)
-			{
-				$vids[$key] = file_get_contents($value);
-				unlink($value);
-			}
+			$data = file_get_contents($output);
+			unlink($output);
+			$output = $data;
 		}
-		return $vids;
+		unlink("/tmp/ivideo.txt");
+		return $output;
 	}
-	public function __construct($video = "", $executable = "ffmpeg", $raw = false)
+	public function __construct($video = "", $size = array(300,200), $executable = "ffmpeg")
 	{
-		$this->video = $video;
-		$this->raw = $raw;
-		$this->extension = pathinfo($video, PATHINFO_EXTENSION);
-		$this->format = "%s_%d";
+		$this->video 	= $video;
+		$this->size 	= $size;
+		$this->format 	= "%s_%d";
 		parent::__construct($executable);
 	}
 };
