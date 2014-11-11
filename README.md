@@ -1,4 +1,3 @@
-ivideo
+IVideo
 ======
-
-an experimental wrapper for ffmpeg for splitting video into chunks for gif-less animated video thumbnails
+wrapper for ffmpeg, pass a video through the IVideo class and split it into a webm file for animated thumbnails (without gifs).
