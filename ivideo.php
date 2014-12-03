@@ -1,7 +1,5 @@
 <?php
-
-if (basename(__FILE__) == basename($_SERVER["SCRIPT_FILENAME"]))
-	return exit;
+namespace IVideo;
 
 class FFMPEG {
 	private $executable;
@@ -28,7 +26,7 @@ class FFMPEG {
 	}
 };
 
-class IVideo extends FFMPEG {
+class Thumbnail extends FFMPEG {
 	private $video;
 	private $format;
 	private $size;
