@@ -1,7 +1,7 @@
 <?php
-require_once("ivideo.php");
+require_once('ivideo.php');
 
-$video = new IVideo("video.mp4");
+$video = new IVideo\Thumbnail('video.mp4');
 $splitted = $video->split();
 ?>
 <!DOCTYPE html>
